@@ -34,20 +34,16 @@ func NewSongsHandler(validator *validator.Validate, songsService SongsService) *
 
 func (h SongsHandler) RegisterRoutes(r *chi.Mux) {
 	r.Route("/songs", func(r chi.Router) {
-		r.With(middleware.ValidateGetSongsParam(h.validator)).Get("/", h.getSongs)
-		r.With(middleware.ValidateIDInput, middleware.ValidateGetSongParam).Get("/{id}", h.getSongText)
-		r.With(middleware.ValidateIDInput).Delete("/{id}", h.deleteSong)
-		r.With(middleware.ValidateIDInput, middleware.ValidateUpdateSongInput(h.validator)).Put("/{id}", h.updateSong)
-		r.With(middleware.ValidateCreateSongInput(h.validator)).Post("/", h.createSong)
+		r.Get("/", middleware.ValidateGetSongsParam(h.validator, h.getSongs))
+		r.Get("/{id}", middleware.ValidateGetSongParam(h.getSongText))
+		r.Delete("/{id}", middleware.ValidateIDInput(h.deleteSong))
+		r.Put("/{id}", middleware.ValidateUpdateSongInput(h.validator, h.updateSong))
+		r.Post("/", middleware.ValidateCreateSongInput(h.validator, h.createSong))
 	})
 }
 
-func (h SongsHandler) getSongs(w http.ResponseWriter, r *http.Request) {
-	page := r.Context().Value(delivery.PageKey).(int)
-	limit := r.Context().Value(delivery.LimitKey).(int)
-	filters := r.Context().Value(delivery.FiltersKey).(map[string]string)
-
-	songs, err := h.songsService.GetSongs(page, limit, filters)
+func (h SongsHandler) getSongs(w http.ResponseWriter, r *http.Request, params delivery.PaginationParams, filters map[string]string) {
+	songs, err := h.songsService.GetSongs(params.Page, params.Limit, filters)
 	if err != nil {
 		log.WithError(err).Error(delivery.ErrGettingSongs)
 
@@ -63,12 +59,8 @@ func (h SongsHandler) getSongs(w http.ResponseWriter, r *http.Request) {
 	delivery.RespondWithJSON(w, http.StatusOK, songs)
 }
 
-func (h SongsHandler) getSongText(w http.ResponseWriter, r *http.Request) {
-	songID := r.Context().Value(delivery.IDInputKey).(int32)
-	page := r.Context().Value(delivery.PageKey).(int)
-	limit := r.Context().Value(delivery.LimitKey).(int)
-
-	songText, err := h.songsService.GetSong(songID, page, limit)
+func (h SongsHandler) getSongText(w http.ResponseWriter, r *http.Request, songID int, params delivery.PaginationParams) {
+	songText, err := h.songsService.GetSong(int32(songID), params.Page, params.Limit)
 	if err != nil {
 		log.WithError(err).Error(delivery.ErrGettingSong)
 
@@ -89,10 +81,8 @@ func (h SongsHandler) getSongText(w http.ResponseWriter, r *http.Request) {
 	delivery.RespondWithJSON(w, http.StatusOK, songText)
 }
 
-func (h SongsHandler) deleteSong(w http.ResponseWriter, r *http.Request) {
-	songID := r.Context().Value(delivery.IDInputKey).(int32)
-
-	if err := h.songsService.Delete(songID); err != nil {
+func (h SongsHandler) deleteSong(w http.ResponseWriter, r *http.Request, songID int) {
+	if err := h.songsService.Delete(int32(songID)); err != nil {
 		log.WithError(err).Error(delivery.ErrDeletingSong)
 
 		if errors.Is(err, domain.ErrSongNotFound) {
@@ -107,11 +97,8 @@ func (h SongsHandler) deleteSong(w http.ResponseWriter, r *http.Request) {
 	delivery.RespondWithJSON(w, http.StatusOK, nil)
 }
 
-func (h SongsHandler) updateSong(w http.ResponseWriter, r *http.Request) {
-	updateSongInput := r.Context().Value(delivery.UpdateSongInputKey).(dto.UpdateSongDto)
-	songID := r.Context().Value(delivery.IDInputKey).(int32)
-
-	song, err := h.songsService.Update(updateSongInput, songID)
+func (h SongsHandler) updateSong(w http.ResponseWriter, r *http.Request, songID int, updateSongInput dto.UpdateSongDto) {
+	song, err := h.songsService.Update(updateSongInput, int32(songID))
 	if err != nil {
 		log.WithError(err).Error(delivery.ErrUpdatingSong)
 
@@ -132,9 +119,7 @@ func (h SongsHandler) updateSong(w http.ResponseWriter, r *http.Request) {
 	delivery.RespondWithJSON(w, http.StatusOK, song)
 }
 
-func (h SongsHandler) createSong(w http.ResponseWriter, r *http.Request) {
-	createSongInput := r.Context().Value(delivery.CreateSongInputKey).(dto.CreateSongDto)
-
+func (h SongsHandler) createSong(w http.ResponseWriter, r *http.Request, createSongInput dto.CreateSongDto) {
 	song, err := h.songsService.Create(createSongInput)
 	if err != nil {
 		log.WithError(err).Error(delivery.ErrCreatingSong)

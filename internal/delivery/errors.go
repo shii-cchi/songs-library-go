@@ -1,10 +1,5 @@
 package delivery
 
-type JsonError struct {
-	Error   string `json:"error"`
-	Message string `json:"message,omitempty"`
-}
-
 const (
 	ErrInvalidCreateSongInput = "invalid create song input body"
 	ErrInvalidUpdateSongInput = "invalid update song input body"
