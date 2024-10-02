@@ -1,21 +1,10 @@
 package delivery
 
-type ContextKey string
-
 const (
 	DefaultPage       = 1
 	DefaultSongsLimit = 10
 	DefaultVerseLimit = 2
 	LimitSongsPerPage = 100
-)
-
-const (
-	CreateSongInputKey ContextKey = "createSongInput"
-	UpdateSongInputKey ContextKey = "updateSongInput"
-	IDInputKey         ContextKey = "idInputKey"
-	PageKey            ContextKey = "page"
-	LimitKey           ContextKey = "limit"
-	FiltersKey         ContextKey = "filters"
 )
 
 const (
