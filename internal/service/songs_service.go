@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"songs-library-go/internal/delivery/dto"
 	"songs-library-go/internal/domain"
+	"strings"
 	"time"
 )
 
@@ -17,6 +18,8 @@ type SongsRepo interface {
 	AddDetails(params domain.AddDetailsParams) error
 	UpdateSong(params domain.UpdateParams) (domain.Song, error)
 	Delete(songID int32) error
+	GetSongs(page int, limit int, filtersMap map[string]string) ([]domain.Song, error)
+	GetSong(songID int32) (string, error)
 }
 
 type SongsService struct {
@@ -90,6 +93,38 @@ func (s SongsService) Delete(songID int32) error {
 	}
 
 	return nil
+}
+
+func (s SongsService) GetSongs(page int, limit int, filters map[string]string) ([]dto.SongDto, error) {
+	songs, err := s.repo.GetSongs(page, limit, filters)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.toSongDto(songs), nil
+}
+
+func (s SongsService) GetSong(songID int32, page int, limit int) (dto.VerseDto, error) {
+	songText, err := s.repo.GetSong(songID)
+	if err != nil {
+		return dto.VerseDto{}, err
+	}
+
+	verses := strings.Split(songText, "\n\n")
+
+	if page > len(verses)/limit+1 {
+		return dto.VerseDto{}, fmt.Errorf("%w (page: %d, total page: %d)", domain.ErrPageDoesntExist, page, len(verses)/limit+1)
+	}
+
+	start := (page - 1) * limit
+	end := start + limit
+	if end > len(verses) {
+		end = len(verses)
+	}
+
+	versesPage := verses[start:end]
+
+	return dto.VerseDto{Verses: versesPage}, nil
 }
 
 //func (s SongsService) getAndSaveDetails(songID int32, groupName, songName string) {
@@ -221,4 +256,28 @@ func (s SongsService) buildUpdateParams(songID int32, input dto.UpdateSongDto) (
 	updateParams.Details = params
 
 	return updateParams, nil
+}
+
+func (s SongsService) toSongDto(songs []domain.Song) []dto.SongDto {
+	var songsDto []dto.SongDto
+
+	for _, song := range songs {
+		var releaseDate string
+		if !song.ReleaseDate.IsZero() {
+			releaseDate = song.ReleaseDate.Format(domain.DateFormat)
+		}
+
+		songDto := dto.SongDto{
+			ID:          song.ID,
+			Group:       song.Group,
+			Song:        song.Song,
+			ReleaseDate: releaseDate,
+			Text:        song.Text,
+			Link:        song.Link,
+		}
+
+		songsDto = append(songsDto, songDto)
+	}
+
+	return songsDto
 }

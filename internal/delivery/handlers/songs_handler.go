@@ -13,9 +13,11 @@ import (
 )
 
 type SongsService interface {
-	Create(createSongInput dto.CreateSongDto) (dto.SongDto, error)
-	Update(updateSongInput dto.UpdateSongDto, songID int32) (dto.SongDto, error)
+	GetSongs(page int, limit int, filters map[string]string) ([]dto.SongDto, error)
+	GetSong(songID int32, page int, limit int) (dto.VerseDto, error)
 	Delete(songID int32) error
+	Update(updateSongInput dto.UpdateSongDto, songID int32) (dto.SongDto, error)
+	Create(createSongInput dto.CreateSongDto) (dto.SongDto, error)
 }
 
 type SongsHandler struct {
@@ -32,29 +34,77 @@ func NewSongsHandler(validator *validator.Validate, songsService SongsService) *
 
 func (h SongsHandler) RegisterRoutes(r *chi.Mux) {
 	r.Route("/songs", func(r chi.Router) {
-		r.With(middleware.ValidateCreateSongInput(h.validator)).Post("/", h.createSong)
-		r.With(middleware.ValidateIDInput, middleware.ValidateUpdateSongInput(h.validator)).Put("/{id}", h.updateSong)
+		r.With(middleware.ValidateGetSongsParam(h.validator)).Get("/", h.getSongs)
+		r.With(middleware.ValidateIDInput, middleware.ValidateGetSongParam).Get("/{id}", h.getSongText)
 		r.With(middleware.ValidateIDInput).Delete("/{id}", h.deleteSong)
+		r.With(middleware.ValidateIDInput, middleware.ValidateUpdateSongInput(h.validator)).Put("/{id}", h.updateSong)
+		r.With(middleware.ValidateCreateSongInput(h.validator)).Post("/", h.createSong)
 	})
 }
 
-func (h SongsHandler) createSong(w http.ResponseWriter, r *http.Request) {
-	createSongInput := r.Context().Value(delivery.CreateSongInputKey).(dto.CreateSongDto)
+func (h SongsHandler) getSongs(w http.ResponseWriter, r *http.Request) {
+	page := r.Context().Value(delivery.PageKey).(int)
+	limit := r.Context().Value(delivery.LimitKey).(int)
+	filters := r.Context().Value(delivery.FiltersKey).(map[string]string)
 
-	song, err := h.songsService.Create(createSongInput)
+	songs, err := h.songsService.GetSongs(page, limit, filters)
 	if err != nil {
-		log.WithError(err).Error(delivery.ErrCreatingSong)
+		log.WithError(err).Error(delivery.ErrGettingSongs)
 
-		if errors.Is(err, domain.ErrSongAlreadyExist) {
-			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JsonError{Error: delivery.ErrCreatingSong, Message: domain.ErrSongAlreadyExist.Error()})
+		if errors.Is(err, domain.ErrPageDoesntExist) {
+			delivery.RespondWithJSON(w, http.StatusNotFound, delivery.JsonError{Error: delivery.ErrGettingSongs, Message: domain.ErrPageDoesntExist.Error()})
 			return
 		}
 
-		delivery.RespondWithJSON(w, http.StatusInternalServerError, delivery.JsonError{Error: delivery.ErrCreatingSong})
+		delivery.RespondWithJSON(w, http.StatusInternalServerError, delivery.JsonError{Error: delivery.ErrGettingSongs})
 		return
 	}
 
-	delivery.RespondWithJSON(w, http.StatusCreated, song)
+	delivery.RespondWithJSON(w, http.StatusOK, songs)
+}
+
+func (h SongsHandler) getSongText(w http.ResponseWriter, r *http.Request) {
+	songID := r.Context().Value(delivery.IDInputKey).(int32)
+	page := r.Context().Value(delivery.PageKey).(int)
+	limit := r.Context().Value(delivery.LimitKey).(int)
+
+	songText, err := h.songsService.GetSong(songID, page, limit)
+	if err != nil {
+		log.WithError(err).Error(delivery.ErrGettingSong)
+
+		if errors.Is(err, domain.ErrSongNotFound) {
+			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JsonError{Error: delivery.ErrGettingSong, Message: domain.ErrSongNotFound.Error()})
+			return
+		}
+
+		if errors.Is(err, domain.ErrPageDoesntExist) {
+			delivery.RespondWithJSON(w, http.StatusNotFound, delivery.JsonError{Error: delivery.ErrGettingSong, Message: domain.ErrPageDoesntExist.Error()})
+			return
+		}
+
+		delivery.RespondWithJSON(w, http.StatusInternalServerError, delivery.JsonError{Error: delivery.ErrGettingSong})
+		return
+	}
+
+	delivery.RespondWithJSON(w, http.StatusOK, songText)
+}
+
+func (h SongsHandler) deleteSong(w http.ResponseWriter, r *http.Request) {
+	songID := r.Context().Value(delivery.IDInputKey).(int32)
+
+	if err := h.songsService.Delete(songID); err != nil {
+		log.WithError(err).Error(delivery.ErrDeletingSong)
+
+		if errors.Is(err, domain.ErrSongNotFound) {
+			delivery.RespondWithJSON(w, http.StatusNotFound, delivery.JsonError{Error: delivery.ErrDeletingSong, Message: domain.ErrSongNotFound.Error()})
+			return
+		}
+
+		delivery.RespondWithJSON(w, http.StatusInternalServerError, delivery.JsonError{Error: delivery.ErrDeletingSong})
+		return
+	}
+
+	delivery.RespondWithJSON(w, http.StatusOK, nil)
 }
 
 func (h SongsHandler) updateSong(w http.ResponseWriter, r *http.Request) {
@@ -82,20 +132,21 @@ func (h SongsHandler) updateSong(w http.ResponseWriter, r *http.Request) {
 	delivery.RespondWithJSON(w, http.StatusOK, song)
 }
 
-func (h SongsHandler) deleteSong(w http.ResponseWriter, r *http.Request) {
-	songID := r.Context().Value(delivery.IDInputKey).(int32)
+func (h SongsHandler) createSong(w http.ResponseWriter, r *http.Request) {
+	createSongInput := r.Context().Value(delivery.CreateSongInputKey).(dto.CreateSongDto)
 
-	if err := h.songsService.Delete(songID); err != nil {
-		log.WithError(err).Error(delivery.ErrDeletingSong)
+	song, err := h.songsService.Create(createSongInput)
+	if err != nil {
+		log.WithError(err).Error(delivery.ErrCreatingSong)
 
-		if errors.Is(err, domain.ErrSongNotFound) {
-			delivery.RespondWithJSON(w, http.StatusNotFound, delivery.JsonError{Error: delivery.ErrDeletingSong, Message: domain.ErrSongNotFound.Error()})
+		if errors.Is(err, domain.ErrSongAlreadyExist) {
+			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JsonError{Error: delivery.ErrCreatingSong, Message: domain.ErrSongAlreadyExist.Error()})
 			return
 		}
 
-		delivery.RespondWithJSON(w, http.StatusInternalServerError, delivery.JsonError{Error: delivery.ErrDeletingSong})
+		delivery.RespondWithJSON(w, http.StatusInternalServerError, delivery.JsonError{Error: delivery.ErrCreatingSong})
 		return
 	}
 
-	delivery.RespondWithJSON(w, http.StatusOK, nil)
+	delivery.RespondWithJSON(w, http.StatusCreated, song)
 }

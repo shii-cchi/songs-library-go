@@ -16,4 +16,6 @@ var (
 	ErrGettingDetails     = errors.New("error getting song details from another server")
 	ErrDetailsNotFound    = errors.New("details for song not found")
 	ErrAddingDetails      = errors.New("error adding song details in db")
+	ErrPageDoesntExist    = errors.New("this page doesn't exist")
+	ErrSongTextNotFound   = errors.New("text for this song not found")
 )
