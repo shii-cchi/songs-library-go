@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	log "github.com/sirupsen/logrus"
+	"math"
 	"net/http"
 	"net/url"
 	"songs-library-go/internal/delivery/dto"
@@ -49,6 +50,10 @@ func (s SongsService) GetSongText(songID int32, params dto.PaginationParamsDto) 
 		return nil, 0, err
 	}
 
+	if songText == "" {
+		return make([]string, 0), 0, nil
+	}
+
 	verses := strings.Split(songText, "\n\n")
 
 	start := (params.Page - 1) * params.Limit
@@ -57,7 +62,7 @@ func (s SongsService) GetSongText(songID int32, params dto.PaginationParamsDto) 
 		end = len(verses)
 	}
 
-	return verses[start:end], len(verses)/params.Limit + 1, nil
+	return verses[start:end], int(math.Ceil(float64(len(verses)) / float64(params.Limit))), nil
 }
 
 func (s SongsService) Delete(songID int32) error {

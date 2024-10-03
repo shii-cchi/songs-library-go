@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/lib/pq"
+	"math"
 	"songs-library-go/internal/domain"
 )
 
@@ -45,7 +46,7 @@ func (r SongsRepo) GetSongs(page int, limit int, filtersMap map[string]string) (
 		return nil, 0, err
 	}
 
-	return r.toSongs(songs), totalCount/limit + 1, nil
+	return r.toSongs(songs), int(math.Ceil(float64(totalCount) / float64(limit))), nil
 }
 
 func (r SongsRepo) GetSongText(songID int32) (string, error) {
@@ -62,7 +63,7 @@ func (r SongsRepo) GetSongText(songID int32) (string, error) {
 	}
 
 	if !text.Valid {
-		return "", fmt.Errorf("%w (id: %d)", domain.ErrSongTextNotFound, songID)
+		return "", nil
 	}
 
 	return text.String, nil

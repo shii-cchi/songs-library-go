@@ -129,7 +129,7 @@ func (h SongsHandler) createSong(w http.ResponseWriter, r *http.Request, createS
 }
 
 func (h SongsHandler) toSongsDto(songs []domain.Song, totalPages int) dto.SongsDto {
-	var songsDto []dto.SongDto
+	songsDto := make([]dto.SongDto, 0)
 
 	for _, song := range songs {
 		songDto := h.toSongDto(song)
