@@ -114,6 +114,8 @@ func ValidateUpdateSongInput(v *validator.Validate, next func(http.ResponseWrite
 			return
 		}
 
+		trimSpace(&updateSongInput)
+
 		if err := v.Struct(updateSongInput); err != nil {
 			log.WithError(err).Error(delivery.ErrInvalidUpdateSongInput)
 			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JsonError{Error: delivery.ErrInvalidUpdateSongInput, Message: delivery.MesInvalidUpdateSongInput})
@@ -133,6 +135,8 @@ func ValidateCreateSongInput(v *validator.Validate, next func(http.ResponseWrite
 			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JsonError{Error: delivery.ErrInvalidCreateSongInput, Message: delivery.ErrInvalidJSON})
 			return
 		}
+
+		trimSpace(&createSongInput)
 
 		if err := v.Struct(createSongInput); err != nil {
 			log.WithError(err).Error(delivery.ErrInvalidCreateSongInput)
@@ -182,6 +186,8 @@ func getFilters(w http.ResponseWriter, r *http.Request) (dto.SongParamsDto, erro
 		}
 	}
 
+	trimSpace(&dtoFilters)
+
 	return dtoFilters, nil
 }
 
@@ -199,4 +205,31 @@ func extractAndValidateID(w http.ResponseWriter, r *http.Request) (int, error) {
 
 func isAnyFieldProvided(input dto.SongParamsDto) bool {
 	return input.Group != nil || input.Song != nil || input.ReleaseDate != nil || input.Text != nil || input.Link != nil
+}
+
+func trimSpace(input interface{}) {
+	val := reflect.ValueOf(input)
+	if val.Kind() != reflect.Ptr || val.IsNil() {
+		return
+	}
+
+	val = val.Elem()
+	if val.Kind() != reflect.Struct {
+		return
+	}
+
+	for i := 0; i < val.NumField(); i++ {
+		field := val.Field(i)
+
+		if field.Kind() == reflect.String {
+			field.SetString(strings.TrimSpace(field.String()))
+		}
+
+		if field.Kind() == reflect.Ptr && field.Type().Elem().Kind() == reflect.String {
+			if !field.IsNil() {
+				strVal := field.Elem()
+				strVal.SetString(strings.TrimSpace(strVal.String()))
+			}
+		}
+	}
 }
