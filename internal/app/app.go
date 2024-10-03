@@ -12,6 +12,7 @@ import (
 	"songs-library-go/internal/repository"
 	"songs-library-go/internal/service"
 	"songs-library-go/internal/validator"
+	"time"
 )
 
 const (
@@ -22,6 +23,8 @@ const (
 	successfulConnectionToDb = "successfully connected to db"
 	serverStart              = "server starting on port"
 )
+
+const pingInterval = 10 * time.Second
 
 func Run() {
 	cfg, err := config.LoadConfig()
@@ -37,6 +40,8 @@ func Run() {
 	defer conn.Close()
 	log.Info(successfulConnectionToDb)
 
+	go pingDatabase(conn)
+
 	songsRepo := repository.NewSongsRepo(conn)
 
 	v := validator.Init()
@@ -48,4 +53,19 @@ func Run() {
 
 	log.Infof(serverStart+" %s", cfg.Port)
 	log.Fatal(http.ListenAndServe(":"+cfg.Port, r))
+}
+
+func pingDatabase(conn *sql.DB) {
+	ticker := time.NewTicker(pingInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			err := conn.Ping()
+			if err != nil {
+				log.WithError(err).Fatal(errConnectingToDb)
+			}
+		}
+	}
 }
