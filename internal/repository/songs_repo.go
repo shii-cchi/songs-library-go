@@ -8,6 +8,7 @@ import (
 	"github.com/lib/pq"
 	"math"
 	"songs-library-go/internal/domain"
+	"strings"
 )
 
 const songsTable = "songs"
@@ -26,9 +27,21 @@ func (r SongsRepo) GetSongs(page int, limit int, filtersMap map[string]string) (
 	query := r.goquDb.From(songsTable)
 
 	conditions := goqu.Ex{}
+
 	if len(filtersMap) > 0 {
 		for field, value := range filtersMap {
-			conditions[field] = value
+			if field == "text" && value != "" {
+				words := strings.Fields(value)
+
+				var textConditions []goqu.Expression
+				for _, word := range words {
+					textConditions = append(textConditions, goqu.I("text").ILike("%"+word+"%"))
+				}
+
+				query = query.Where(goqu.And(textConditions...))
+			} else {
+				conditions[field] = value
+			}
 		}
 
 		query = query.Where(conditions)
