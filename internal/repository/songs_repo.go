@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/lib/pq"
-	"reflect"
 	"songs-library-go/internal/domain"
 )
 
@@ -22,11 +21,11 @@ func NewSongsRepo(db *sql.DB) *SongsRepo {
 	}
 }
 
-func (r SongsRepo) GetSongs(page int, limit int, filtersMap map[string]string) ([]domain.Song, error) {
+func (r SongsRepo) GetSongs(page int, limit int, filtersMap map[string]string) ([]domain.Song, int, error) {
 	query := r.goquDb.From(songsTable)
 
 	conditions := goqu.Ex{}
-	if filtersMap != nil && len(filtersMap) > 0 {
+	if len(filtersMap) > 0 {
 		for field, value := range filtersMap {
 			conditions[field] = value
 		}
@@ -36,22 +35,17 @@ func (r SongsRepo) GetSongs(page int, limit int, filtersMap map[string]string) (
 
 	totalCount, err := r.getTotalCount(conditions)
 	if err != nil {
-		return nil, err
-	}
-
-	totalPages := totalCount/limit + 1
-	if page > totalPages {
-		return nil, fmt.Errorf("%w (page: %d, total pages: %d)", domain.ErrPageDoesntExist, page, totalPages)
+		return nil, 0, err
 	}
 
 	query = query.Limit(uint(limit)).Offset(uint((page - 1) * limit))
 
 	var songs []domain.SongWithNull
 	if err := query.Executor().ScanStructs(&songs); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return r.toSongs(songs), nil
+	return r.toSongs(songs), totalCount/limit + 1, nil
 }
 
 func (r SongsRepo) GetSong(songID int32) (string, error) {
@@ -64,11 +58,11 @@ func (r SongsRepo) GetSong(songID int32) (string, error) {
 	}
 
 	if !songExists {
-		return "", domain.ErrSongNotFound
+		return "", fmt.Errorf("%w (id: %d)", domain.ErrSongNotFound, songID)
 	}
 
 	if !text.Valid {
-		return "", domain.ErrSongTextNotFound
+		return "", fmt.Errorf("%w (id: %d)", domain.ErrSongTextNotFound, songID)
 	}
 
 	return text.String, nil
@@ -79,42 +73,25 @@ func (r SongsRepo) Delete(songID int32) error {
 
 	res, err := de.Executor().Exec()
 	if err != nil {
-		return err
+		return fmt.Errorf("%w (id: %d): %s", domain.ErrDeletingSong, songID, err)
 	}
 
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return err
+		return fmt.Errorf("%w (id: %d): %s", domain.ErrDeletingSong, songID, err)
 	}
 
 	if rowsAffected == 0 {
-		return domain.ErrSongNotFound
+		return fmt.Errorf("%w (id: %d)", domain.ErrSongNotFound, songID)
 	}
 
 	return nil
 }
 
-func (r SongsRepo) UpdateSong(params domain.UpdateParams) (domain.Song, error) {
-	fieldsToUpdate := map[string]interface{}{}
-
-	for field, value := range map[string]interface{}{
-		"group":        params.Group,
-		"song":         params.Song,
-		"release_date": params.Details.ReleaseDate,
-		"text":         params.Details.Text,
-		"link":         params.Details.Link,
-	} {
-		if value != nil {
-			val := reflect.ValueOf(value)
-			if val.Kind() == reflect.Ptr && !val.IsNil() {
-				fieldsToUpdate[field] = val.Elem().Interface()
-			}
-		}
-	}
-
+func (r SongsRepo) UpdateSong(songID int32, paramsMap map[string]string) (domain.Song, error) {
 	update := r.goquDb.Update(songsTable).
-		Set(fieldsToUpdate).
-		Where(goqu.Ex{"id": params.Details.ID}).
+		Set(paramsMap).
+		Where(goqu.Ex{"id": songID}).
 		Returning("id", "group", "song", "release_date", "text", "link")
 
 	var updatedSong domain.SongWithNull
@@ -122,56 +99,40 @@ func (r SongsRepo) UpdateSong(params domain.UpdateParams) (domain.Song, error) {
 	if err != nil {
 		var pgErr *pq.Error
 		if errors.As(err, &pgErr) && pgErr.Code == domain.CodeUniqueConstraintViolation {
-			return domain.Song{}, fmt.Errorf("%w: %s", domain.ErrSongAlreadyExist, err)
+			return domain.Song{}, fmt.Errorf("%w (id: %d): %s", domain.ErrSongAlreadyExist, songID, err)
 		}
-		return domain.Song{}, err
+		return domain.Song{}, fmt.Errorf("%w (id: %d): %s", domain.ErrUpdatingSong, songID, err)
 	}
 
 	if !songExists {
-		return domain.Song{}, domain.ErrSongNotFound
+		return domain.Song{}, fmt.Errorf("%w (id: %d)", domain.ErrSongNotFound, songID)
 	}
 
 	return r.toSong(updatedSong), nil
 }
 
 func (r SongsRepo) Create(groupName, songName string) (domain.Song, error) {
-	var newSong domain.Song
-
 	insert := r.goquDb.Insert(songsTable).
 		Rows(goqu.Record{"group": groupName, "song": songName}).
 		Returning("id", "group", "song")
 
+	var newSong domain.Song
 	_, err := insert.Executor().ScanStruct(&newSong)
 	if err != nil {
 		var pgErr *pq.Error
 		if errors.As(err, &pgErr) && pgErr.Code == domain.CodeUniqueConstraintViolation {
-			return domain.Song{}, fmt.Errorf("%w: %s", domain.ErrSongAlreadyExist, err)
+			return domain.Song{}, fmt.Errorf("%w (group name: %s, song name: %s): %s", domain.ErrSongAlreadyExist, groupName, songName, err)
 		}
-		return domain.Song{}, err
+		return domain.Song{}, fmt.Errorf("%w (group name: %s, song name: %s): %s", domain.ErrCreatingSong, groupName, songName, err)
 	}
 
 	return newSong, nil
 }
 
-func (r SongsRepo) AddDetails(params domain.AddDetailsParams) error {
-	fieldsToUpdate := map[string]interface{}{}
-
-	for field, value := range map[string]interface{}{
-		"release_date": params.ReleaseDate,
-		"text":         params.Text,
-		"link":         params.Link,
-	} {
-		if value != nil {
-			val := reflect.ValueOf(value)
-			if val.Kind() == reflect.Ptr && !val.IsNil() {
-				fieldsToUpdate[field] = val.Elem().Interface()
-			}
-		}
-	}
-
+func (r SongsRepo) AddDetails(songID int32, paramsMap map[string]string) error {
 	update := r.goquDb.Update(songsTable).
-		Set(fieldsToUpdate).
-		Where(goqu.Ex{"id": params.ID})
+		Set(paramsMap).
+		Where(goqu.Ex{"id": songID})
 
 	res, err := update.Executor().Exec()
 	if err != nil {
@@ -188,6 +149,17 @@ func (r SongsRepo) AddDetails(params domain.AddDetailsParams) error {
 	}
 
 	return nil
+}
+
+func (r SongsRepo) getTotalCount(conditions goqu.Ex) (int, error) {
+	query := r.goquDb.Select(goqu.COUNT("id")).From(songsTable).Where(conditions)
+
+	var totalCount int
+	if _, err := query.Executor().ScanVal(&totalCount); err != nil {
+		return 0, err
+	}
+
+	return totalCount, nil
 }
 
 func (r SongsRepo) toSongs(songs []domain.SongWithNull) []domain.Song {
@@ -217,16 +189,4 @@ func (r SongsRepo) toSong(song domain.SongWithNull) domain.Song {
 	}
 
 	return normalizedSong
-}
-
-func (r SongsRepo) getTotalCount(conditions goqu.Ex) (int, error) {
-	var totalCount int
-
-	query := r.goquDb.Select(goqu.COUNT("id")).From(songsTable).Where(conditions)
-
-	if _, err := query.Executor().ScanVal(&totalCount); err != nil {
-		return 0, err
-	}
-
-	return totalCount, nil
 }

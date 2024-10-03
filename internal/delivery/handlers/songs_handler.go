@@ -13,11 +13,11 @@ import (
 )
 
 type SongsService interface {
-	GetSongs(page int, limit int, filters map[string]string) ([]dto.SongDto, error)
-	GetSong(songID int32, page int, limit int) (dto.VerseDto, error)
+	GetSongs(params dto.GetSongsDto) ([]domain.Song, int, error)
+	GetSong(songID int32, params dto.PaginationParamsDto) ([]string, int, error)
 	Delete(songID int32) error
-	Update(updateSongInput dto.UpdateSongDto, songID int32) (dto.SongDto, error)
-	Create(createSongInput dto.CreateSongDto) (dto.SongDto, error)
+	Update(songID int32, updateSongInput dto.SongParamsDto) (domain.Song, error)
+	Create(createSongInput dto.CreateSongDto) (domain.Song, error)
 }
 
 type SongsHandler struct {
@@ -42,25 +42,19 @@ func (h SongsHandler) RegisterRoutes(r *chi.Mux) {
 	})
 }
 
-func (h SongsHandler) getSongs(w http.ResponseWriter, r *http.Request, params delivery.PaginationParams, filters map[string]string) {
-	songs, err := h.songsService.GetSongs(params.Page, params.Limit, filters)
+func (h SongsHandler) getSongs(w http.ResponseWriter, r *http.Request, params dto.GetSongsDto) {
+	songs, totalPages, err := h.songsService.GetSongs(params)
 	if err != nil {
 		log.WithError(err).Error(delivery.ErrGettingSongs)
-
-		if errors.Is(err, domain.ErrPageDoesntExist) {
-			delivery.RespondWithJSON(w, http.StatusNotFound, delivery.JsonError{Error: delivery.ErrGettingSongs, Message: domain.ErrPageDoesntExist.Error()})
-			return
-		}
-
 		delivery.RespondWithJSON(w, http.StatusInternalServerError, delivery.JsonError{Error: delivery.ErrGettingSongs})
 		return
 	}
 
-	delivery.RespondWithJSON(w, http.StatusOK, songs)
+	delivery.RespondWithJSON(w, http.StatusOK, h.toSongsDto(songs, totalPages))
 }
 
-func (h SongsHandler) getSongText(w http.ResponseWriter, r *http.Request, songID int, params delivery.PaginationParams) {
-	songText, err := h.songsService.GetSong(int32(songID), params.Page, params.Limit)
+func (h SongsHandler) getSongText(w http.ResponseWriter, r *http.Request, songID int, params dto.PaginationParamsDto) {
+	verses, totalVerses, err := h.songsService.GetSong(int32(songID), params)
 	if err != nil {
 		log.WithError(err).Error(delivery.ErrGettingSong)
 
@@ -69,16 +63,14 @@ func (h SongsHandler) getSongText(w http.ResponseWriter, r *http.Request, songID
 			return
 		}
 
-		if errors.Is(err, domain.ErrPageDoesntExist) {
-			delivery.RespondWithJSON(w, http.StatusNotFound, delivery.JsonError{Error: delivery.ErrGettingSong, Message: domain.ErrPageDoesntExist.Error()})
-			return
-		}
-
 		delivery.RespondWithJSON(w, http.StatusInternalServerError, delivery.JsonError{Error: delivery.ErrGettingSong})
 		return
 	}
 
-	delivery.RespondWithJSON(w, http.StatusOK, songText)
+	delivery.RespondWithJSON(w, http.StatusOK, dto.VersesDto{
+		Verses:      verses,
+		TotalVerses: totalVerses,
+	})
 }
 
 func (h SongsHandler) deleteSong(w http.ResponseWriter, r *http.Request, songID int) {
@@ -97,8 +89,8 @@ func (h SongsHandler) deleteSong(w http.ResponseWriter, r *http.Request, songID 
 	delivery.RespondWithJSON(w, http.StatusOK, nil)
 }
 
-func (h SongsHandler) updateSong(w http.ResponseWriter, r *http.Request, songID int, updateSongInput dto.UpdateSongDto) {
-	song, err := h.songsService.Update(updateSongInput, int32(songID))
+func (h SongsHandler) updateSong(w http.ResponseWriter, r *http.Request, songID int, updateSongInput dto.SongParamsDto) {
+	song, err := h.songsService.Update(int32(songID), updateSongInput)
 	if err != nil {
 		log.WithError(err).Error(delivery.ErrUpdatingSong)
 
@@ -116,7 +108,7 @@ func (h SongsHandler) updateSong(w http.ResponseWriter, r *http.Request, songID 
 		return
 	}
 
-	delivery.RespondWithJSON(w, http.StatusOK, song)
+	delivery.RespondWithJSON(w, http.StatusOK, h.toSongDto(song))
 }
 
 func (h SongsHandler) createSong(w http.ResponseWriter, r *http.Request, createSongInput dto.CreateSongDto) {
@@ -133,5 +125,37 @@ func (h SongsHandler) createSong(w http.ResponseWriter, r *http.Request, createS
 		return
 	}
 
-	delivery.RespondWithJSON(w, http.StatusCreated, song)
+	delivery.RespondWithJSON(w, http.StatusCreated, h.toSongDto(song))
+}
+
+func (h SongsHandler) toSongsDto(songs []domain.Song, totalPages int) dto.SongsDto {
+	var songsDto []dto.SongDto
+
+	for _, song := range songs {
+		songDto := h.toSongDto(song)
+		songsDto = append(songsDto, songDto)
+	}
+
+	return dto.SongsDto{
+		Songs:      songsDto,
+		TotalPages: totalPages,
+	}
+}
+
+func (h SongsHandler) toSongDto(song domain.Song) dto.SongDto {
+	var releaseDate string
+	if !song.ReleaseDate.IsZero() {
+		releaseDate = song.ReleaseDate.Format(domain.DateFormat)
+	}
+
+	songDto := dto.SongDto{
+		ID:          song.ID,
+		Group:       song.Group,
+		Song:        song.Song,
+		ReleaseDate: releaseDate,
+		Text:        song.Text,
+		Link:        song.Link,
+	}
+
+	return songDto
 }
