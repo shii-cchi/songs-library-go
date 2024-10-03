@@ -22,6 +22,7 @@ const (
 	countTries   = 10
 )
 
+// Init establishes a connection to the PostgreSQL database, checks the connection, and runs migrations.
 func Init(cfg *config.Config) *sql.DB {
 	conn, err := sql.Open("postgres", fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=disable", cfg.DbUser, cfg.DbPassword, cfg.DbHost, cfg.DbPort, cfg.DbName))
 	if err != nil {

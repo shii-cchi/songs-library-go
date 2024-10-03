@@ -12,6 +12,7 @@ const (
 	successfulConfigLoad = "config has been loaded successfully"
 )
 
+// Config is a struct that holds the configuration settings for the application.
 type Config struct {
 	Port            string
 	DbUser          string
@@ -19,9 +20,10 @@ type Config struct {
 	DbHost          string
 	DbPort          string
 	DbName          string
-	MusicInfoApiUrl string
+	MusicInfoAPIURL string
 }
 
+// Init loads environment variables from the .env file and returns a Config struct.
 func Init() *Config {
 	if err := godotenv.Load(".env"); err != nil {
 		log.WithError(err).Fatal(errLoadingConfig)
@@ -57,8 +59,8 @@ func Init() *Config {
 		log.Fatalf("DB_NAME: %s", errEnvVarNotDefined)
 	}
 
-	musicInfoApiUrl := os.Getenv("MUSIC_INFO_API_URL")
-	if musicInfoApiUrl == "" {
+	musicInfoAPIURL := os.Getenv("MUSIC_INFO_API_URL")
+	if musicInfoAPIURL == "" {
 		log.Fatalf("MUSIC_INFO_API_URL: %s", errEnvVarNotDefined)
 	}
 
@@ -71,6 +73,6 @@ func Init() *Config {
 		DbHost:          dbHost,
 		DbPort:          dbPort,
 		DbName:          dbName,
-		MusicInfoApiUrl: musicInfoApiUrl,
+		MusicInfoAPIURL: musicInfoAPIURL,
 	}
 }

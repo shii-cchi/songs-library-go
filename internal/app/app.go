@@ -2,6 +2,7 @@ package app
 
 import (
 	"github.com/go-chi/chi/v5"
+	// Import the PostgreSQL driver.
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 
 const serverStart = "server starting on port"
 
+// Run initializes whole application.
 func Run() {
 	cfg := config.Init()
 
@@ -23,7 +25,7 @@ func Run() {
 	songsRepo := repository.NewSongsRepo(conn)
 
 	v := validator.Init()
-	songsService := service.NewSongsService(songsRepo, cfg.MusicInfoApiUrl)
+	songsService := service.NewSongsService(songsRepo, cfg.MusicInfoAPIURL)
 
 	r := chi.NewRouter()
 	songsHandler := handlers.NewSongsHandler(v, songsService)

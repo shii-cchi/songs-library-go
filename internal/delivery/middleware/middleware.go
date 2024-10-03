@@ -15,6 +15,7 @@ import (
 	"strings"
 )
 
+// ValidateGetSongsParam validates pagination and filter parameters for getting songs.
 func ValidateGetSongsParam(v *validator.Validate, next func(http.ResponseWriter, *http.Request, dto.GetSongsDto)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		page, err := getPaginationParam(w, r, "page", delivery.DefaultPage)
@@ -42,7 +43,7 @@ func ValidateGetSongsParam(v *validator.Validate, next func(http.ResponseWriter,
 
 		if err := v.Struct(getSongsDto); err != nil {
 			log.WithError(err).Error(delivery.ErrInvalidGetSongsParam)
-			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JsonError{Error: delivery.ErrInvalidGetSongsParam, Message: delivery.MesInvalidGetSongsParam})
+			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JSONError{Error: delivery.ErrInvalidGetSongsParam, Message: delivery.MesInvalidGetSongsParam})
 			return
 		}
 
@@ -50,6 +51,7 @@ func ValidateGetSongsParam(v *validator.Validate, next func(http.ResponseWriter,
 	}
 }
 
+// ValidateGetSongParam validates the song ID and pagination parameters for retrieving a specific song.
 func ValidateGetSongParam(v *validator.Validate, next func(http.ResponseWriter, *http.Request, int, dto.PaginationParamsDto)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		songID, err := extractAndValidateID(w, r)
@@ -74,7 +76,7 @@ func ValidateGetSongParam(v *validator.Validate, next func(http.ResponseWriter, 
 
 		if err := v.Struct(paginationParams); err != nil {
 			log.WithError(err).Error(delivery.ErrInvalidPaginationParam)
-			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JsonError{Error: delivery.ErrInvalidPaginationParam, Message: delivery.MesInvalidPaginationParam})
+			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JSONError{Error: delivery.ErrInvalidPaginationParam, Message: delivery.MesInvalidPaginationParam})
 			return
 		}
 
@@ -82,6 +84,7 @@ func ValidateGetSongParam(v *validator.Validate, next func(http.ResponseWriter, 
 	}
 }
 
+// ValidateIDInput validates the song ID extracted from the request for further processing.
 func ValidateIDInput(next func(http.ResponseWriter, *http.Request, int)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		songID, err := extractAndValidateID(w, r)
@@ -93,6 +96,7 @@ func ValidateIDInput(next func(http.ResponseWriter, *http.Request, int)) http.Ha
 	}
 }
 
+// ValidateUpdateSongInput validates the song ID and update input for modifying a song's details.
 func ValidateUpdateSongInput(v *validator.Validate, next func(http.ResponseWriter, *http.Request, int, dto.SongParamsDto)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		songID, err := extractAndValidateID(w, r)
@@ -104,13 +108,13 @@ func ValidateUpdateSongInput(v *validator.Validate, next func(http.ResponseWrite
 
 		if err := json.NewDecoder(r.Body).Decode(&updateSongInput); err != nil {
 			log.WithError(err).Error(delivery.ErrInvalidUpdateSongInput)
-			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JsonError{Error: delivery.ErrInvalidUpdateSongInput, Message: delivery.ErrInvalidJSON})
+			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JSONError{Error: delivery.ErrInvalidUpdateSongInput, Message: delivery.ErrInvalidJSON})
 			return
 		}
 
 		if !isAnyFieldProvided(updateSongInput) {
 			log.Error(delivery.ErrInvalidUpdateSongInput)
-			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JsonError{Error: delivery.ErrInvalidUpdateSongInput, Message: delivery.MesEmptyUpdateSongInput})
+			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JSONError{Error: delivery.ErrInvalidUpdateSongInput, Message: delivery.MesEmptyUpdateSongInput})
 			return
 		}
 
@@ -118,7 +122,7 @@ func ValidateUpdateSongInput(v *validator.Validate, next func(http.ResponseWrite
 
 		if err := v.Struct(updateSongInput); err != nil {
 			log.WithError(err).Error(delivery.ErrInvalidUpdateSongInput)
-			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JsonError{Error: delivery.ErrInvalidUpdateSongInput, Message: delivery.MesInvalidUpdateSongInput})
+			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JSONError{Error: delivery.ErrInvalidUpdateSongInput, Message: delivery.MesInvalidUpdateSongInput})
 			return
 		}
 
@@ -126,13 +130,14 @@ func ValidateUpdateSongInput(v *validator.Validate, next func(http.ResponseWrite
 	}
 }
 
+// ValidateCreateSongInput validates the input for creating a new song.
 func ValidateCreateSongInput(v *validator.Validate, next func(http.ResponseWriter, *http.Request, dto.CreateSongDto)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var createSongInput dto.CreateSongDto
 
 		if err := json.NewDecoder(r.Body).Decode(&createSongInput); err != nil {
 			log.WithError(err).Error(delivery.ErrInvalidCreateSongInput)
-			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JsonError{Error: delivery.ErrInvalidCreateSongInput, Message: delivery.ErrInvalidJSON})
+			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JSONError{Error: delivery.ErrInvalidCreateSongInput, Message: delivery.ErrInvalidJSON})
 			return
 		}
 
@@ -140,7 +145,7 @@ func ValidateCreateSongInput(v *validator.Validate, next func(http.ResponseWrite
 
 		if err := v.Struct(createSongInput); err != nil {
 			log.WithError(err).Error(delivery.ErrInvalidCreateSongInput)
-			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JsonError{Error: delivery.ErrInvalidCreateSongInput, Message: delivery.MesInvalidCreateSongInput})
+			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JSONError{Error: delivery.ErrInvalidCreateSongInput, Message: delivery.MesInvalidCreateSongInput})
 			return
 		}
 
@@ -154,7 +159,7 @@ func getPaginationParam(w http.ResponseWriter, r *http.Request, paramName string
 		paramValue, err := strconv.Atoi(paramStr)
 		if err != nil {
 			log.WithError(err).Error(delivery.ErrInvalidPaginationParam)
-			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JsonError{Error: delivery.ErrInvalidPaginationParam, Message: fmt.Sprintf("%s (param: %s, value: %s)", delivery.ErrParsingParam, paramName, paramStr)})
+			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JSONError{Error: delivery.ErrInvalidPaginationParam, Message: fmt.Sprintf("%s (param: %s, value: %s)", delivery.ErrParsingParam, paramName, paramStr)})
 			return 0, errors.New(delivery.ErrParsingParam)
 		}
 		return paramValue, nil
@@ -178,7 +183,7 @@ func getFilters(w http.ResponseWriter, r *http.Request) (dto.SongParamsDto, erro
 		if value := r.URL.Query().Get(filter); value != "" {
 			if !isValid {
 				log.Error(fmt.Sprintf("%s (filter name: %s)", delivery.ErrInvalidFilters, filter))
-				delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JsonError{Error: delivery.ErrInvalidFilters, Message: delivery.MesInvalidFilterName})
+				delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JSONError{Error: delivery.ErrInvalidFilters, Message: delivery.MesInvalidFilterName})
 				return dto.SongParamsDto{}, errors.New(delivery.ErrInvalidFilters)
 			}
 
@@ -196,7 +201,7 @@ func extractAndValidateID(w http.ResponseWriter, r *http.Request) (int, error) {
 	songID, err := strconv.Atoi(songIDStr)
 	if err != nil || songID <= 0 {
 		log.WithError(err).Error(delivery.ErrInvalidIDInput)
-		delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JsonError{Error: delivery.ErrInvalidIDInput, Message: delivery.MesInvalidIDInput})
+		delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JSONError{Error: delivery.ErrInvalidIDInput, Message: delivery.MesInvalidIDInput})
 		return 0, errors.New(delivery.MesInvalidIDInput)
 	}
 

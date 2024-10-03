@@ -12,6 +12,7 @@ import (
 	"strings"
 )
 
+// SongsRepo defines methods for interacting with the song data store, including retrieval, creation, updating, and deletion of songs.
 type SongsRepo interface {
 	GetSongs(page int, limit int, filtersMap map[string]string) ([]domain.Song, int, error)
 	GetSongText(songID int32) (string, error)
@@ -21,18 +22,21 @@ type SongsRepo interface {
 	AddDetails(songID int32, paramsMap map[string]string) error
 }
 
+// SongsService manages song operations and interacts with the repository and external music information API.
 type SongsService struct {
 	repo            SongsRepo
-	musicInfoApiUrl string
+	musicInfoAPIURL string
 }
 
-func NewSongsService(repo SongsRepo, musicInfoApiUrl string) *SongsService {
+// NewSongsService initializes and returns a new instance of SongsService with the provided repository and music info API URL.
+func NewSongsService(repo SongsRepo, musicInfoAPIURL string) *SongsService {
 	return &SongsService{
 		repo:            repo,
-		musicInfoApiUrl: musicInfoApiUrl,
+		musicInfoAPIURL: musicInfoAPIURL,
 	}
 }
 
+// GetSongs retrieves songs from the repository based on the provided filtering and pagination parameters.
 func (s SongsService) GetSongs(params dto.GetSongsDto) ([]domain.Song, int, error) {
 	filtersMap := s.makeSongParamsMap(params.Filters)
 
@@ -44,6 +48,7 @@ func (s SongsService) GetSongs(params dto.GetSongsDto) ([]domain.Song, int, erro
 	return songs, totalPages, nil
 }
 
+// GetSongText retrieves the text of a song by its ID and paginates the verses based on the provided parameters.
 func (s SongsService) GetSongText(songID int32, params dto.PaginationParamsDto) ([]string, int, error) {
 	songText, err := s.repo.GetSongText(songID)
 	if err != nil {
@@ -65,10 +70,12 @@ func (s SongsService) GetSongText(songID int32, params dto.PaginationParamsDto) 
 	return verses[start:end], int(math.Ceil(float64(len(verses)) / float64(params.Limit))), nil
 }
 
+// Delete removes a song by its ID from the repository.
 func (s SongsService) Delete(songID int32) error {
 	return s.repo.Delete(songID)
 }
 
+// Update modifies an existing song's details based on the provided parameters.
 func (s SongsService) Update(songID int32, updateSongInput dto.SongParamsDto) (domain.Song, error) {
 	paramsMap := s.makeSongParamsMap(updateSongInput)
 
@@ -80,6 +87,7 @@ func (s SongsService) Update(songID int32, updateSongInput dto.SongParamsDto) (d
 	return song, nil
 }
 
+// Create adds a new song to the repository and initiates the process to fetch and save its details.
 func (s SongsService) Create(createSongInput dto.CreateSongDto) (domain.Song, error) {
 	song, err := s.repo.Create(createSongInput.Group, createSongInput.Song)
 	if err != nil {
@@ -182,9 +190,9 @@ func (s SongsService) getAndSaveDetails(songID int32, groupName, songName string
 }
 
 func (s SongsService) getDetails(songName, groupName string) (dto.SongParamsDto, error) {
-	requestUrl := fmt.Sprintf("%s/info?group=%s&song=%s", s.musicInfoApiUrl, url.QueryEscape(groupName), url.QueryEscape(songName))
+	requestURL := fmt.Sprintf("%s/info?group=%s&song=%s", s.musicInfoAPIURL, url.QueryEscape(groupName), url.QueryEscape(songName))
 
-	req, err := http.NewRequest("GET", requestUrl, nil)
+	req, err := http.NewRequest("GET", requestURL, nil)
 	if err != nil {
 		return dto.SongParamsDto{}, fmt.Errorf("%s: %s", domain.ErrCreatingRequest, err)
 	}

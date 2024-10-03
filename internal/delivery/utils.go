@@ -5,6 +5,7 @@ import (
 	"net/http"
 )
 
+// RespondWithJSON sends a JSON response with the specified HTTP status code and payload.
 func RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	data, _ := json.Marshal(payload)
 

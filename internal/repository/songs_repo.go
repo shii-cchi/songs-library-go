@@ -13,16 +13,19 @@ import (
 
 const songsTable = "songs"
 
+// SongsRepo implements the SongsRepo interface for interacting with the database using goqu.
 type SongsRepo struct {
 	goquDb *goqu.Database
 }
 
+// NewSongsRepo creates a new instance of SongsRepo, initializing it with a goqu.Database.
 func NewSongsRepo(db *sql.DB) *SongsRepo {
 	return &SongsRepo{
 		goquDb: goqu.New("postgres", db),
 	}
 }
 
+// GetSongs retrieves a paginated list of songs from the database based on filters and pagination parameters.
 func (r SongsRepo) GetSongs(page int, limit int, filtersMap map[string]string) ([]domain.Song, int, error) {
 	query := r.goquDb.From(songsTable)
 
@@ -62,6 +65,7 @@ func (r SongsRepo) GetSongs(page int, limit int, filtersMap map[string]string) (
 	return r.toSongs(songs), int(math.Ceil(float64(totalCount) / float64(limit))), nil
 }
 
+// GetSongText retrieves the text of a song by its ID from the database.
 func (r SongsRepo) GetSongText(songID int32) (string, error) {
 	query := r.goquDb.Select("text").From(songsTable).Where(goqu.Ex{"id": songID})
 
@@ -82,6 +86,7 @@ func (r SongsRepo) GetSongText(songID int32) (string, error) {
 	return text.String, nil
 }
 
+// Delete removes a song from the database by its ID.
 func (r SongsRepo) Delete(songID int32) error {
 	de := r.goquDb.Delete(songsTable).Where(goqu.Ex{"id": songID})
 
@@ -102,6 +107,7 @@ func (r SongsRepo) Delete(songID int32) error {
 	return nil
 }
 
+// UpdateSong modifies an existing song in the database and returns the updated song.
 func (r SongsRepo) UpdateSong(songID int32, paramsMap map[string]string) (domain.Song, error) {
 	update := r.goquDb.Update(songsTable).
 		Set(paramsMap).
@@ -125,6 +131,7 @@ func (r SongsRepo) UpdateSong(songID int32, paramsMap map[string]string) (domain
 	return r.toSong(updatedSong), nil
 }
 
+// Create adds a new song to the database and returns the created song.
 func (r SongsRepo) Create(groupName, songName string) (domain.Song, error) {
 	insert := r.goquDb.Insert(songsTable).
 		Rows(goqu.Record{"group": groupName, "song": songName}).
@@ -143,6 +150,7 @@ func (r SongsRepo) Create(groupName, songName string) (domain.Song, error) {
 	return newSong, nil
 }
 
+// AddDetails updates the song details in the database based on the provided parameters.
 func (r SongsRepo) AddDetails(songID int32, paramsMap map[string]string) error {
 	update := r.goquDb.Update(songsTable).
 		Set(paramsMap).

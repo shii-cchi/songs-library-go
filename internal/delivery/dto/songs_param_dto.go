@@ -1,5 +1,6 @@
 package dto
 
+// SongParamsDto represents the data transfer object for optional song filter parameters.
 type SongParamsDto struct {
 	Group       *string `json:"group,omitempty" validate:"omitempty,min=1,max=100"`
 	Song        *string `json:"song,omitempty" validate:"omitempty,min=1,max=100"`

@@ -1,10 +1,12 @@
 package delivery
 
-type JsonError struct {
+// JSONError represents the structure for error responses in JSON format.
+type JSONError struct {
 	Error   string `json:"error"`
 	Message string `json:"message,omitempty"`
 }
 
+// Error constants for various input validation and parsing issues.
 const (
 	ErrInvalidPaginationParam = "invalid pagination param"
 	ErrParsingParam           = "error parsing pagination param from string to int"
@@ -16,6 +18,7 @@ const (
 	ErrInvalidCreateSongInput = "invalid create song input body"
 )
 
+// Error constants for song-related operations.
 const (
 	ErrGettingSongs    = "error getting songs"
 	ErrGettingSongText = "error getting song text"

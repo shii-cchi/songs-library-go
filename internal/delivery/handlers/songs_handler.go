@@ -12,6 +12,7 @@ import (
 	"songs-library-go/internal/domain"
 )
 
+// SongsService defines the methods for managing songs, including retrieval, creation, updating, and deletion.
 type SongsService interface {
 	GetSongs(params dto.GetSongsDto) ([]domain.Song, int, error)
 	GetSongText(songID int32, params dto.PaginationParamsDto) ([]string, int, error)
@@ -20,11 +21,13 @@ type SongsService interface {
 	Create(createSongInput dto.CreateSongDto) (domain.Song, error)
 }
 
+// SongsHandler manages HTTP requests related to songs and validates input using the provided validator.
 type SongsHandler struct {
 	validator    *validator.Validate
 	songsService SongsService
 }
 
+// NewSongsHandler initializes and returns a new instance of SongsHandler with the provided validator and songs service.
 func NewSongsHandler(validator *validator.Validate, songsService SongsService) *SongsHandler {
 	return &SongsHandler{
 		validator:    validator,
@@ -32,6 +35,7 @@ func NewSongsHandler(validator *validator.Validate, songsService SongsService) *
 	}
 }
 
+// RegisterRoutes sets up the HTTP routes for song-related operations using the Chi router.
 func (h SongsHandler) RegisterRoutes(r *chi.Mux) {
 	r.Route("/songs", func(r chi.Router) {
 		r.Get("/", middleware.ValidateGetSongsParam(h.validator, h.getSongs))
@@ -46,7 +50,7 @@ func (h SongsHandler) getSongs(w http.ResponseWriter, r *http.Request, params dt
 	songs, totalPages, err := h.songsService.GetSongs(params)
 	if err != nil {
 		log.WithError(err).Error(delivery.ErrGettingSongs)
-		delivery.RespondWithJSON(w, http.StatusInternalServerError, delivery.JsonError{Error: delivery.ErrGettingSongs})
+		delivery.RespondWithJSON(w, http.StatusInternalServerError, delivery.JSONError{Error: delivery.ErrGettingSongs})
 		return
 	}
 
@@ -59,11 +63,11 @@ func (h SongsHandler) getSongText(w http.ResponseWriter, r *http.Request, songID
 		log.WithError(err).Error(delivery.ErrGettingSongText)
 
 		if errors.Is(err, domain.ErrSongNotFound) {
-			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JsonError{Error: delivery.ErrGettingSongText, Message: domain.ErrSongNotFound.Error()})
+			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JSONError{Error: delivery.ErrGettingSongText, Message: domain.ErrSongNotFound.Error()})
 			return
 		}
 
-		delivery.RespondWithJSON(w, http.StatusInternalServerError, delivery.JsonError{Error: delivery.ErrGettingSongText})
+		delivery.RespondWithJSON(w, http.StatusInternalServerError, delivery.JSONError{Error: delivery.ErrGettingSongText})
 		return
 	}
 
@@ -78,11 +82,11 @@ func (h SongsHandler) deleteSong(w http.ResponseWriter, r *http.Request, songID 
 		log.WithError(err).Error(delivery.ErrDeletingSong)
 
 		if errors.Is(err, domain.ErrSongNotFound) {
-			delivery.RespondWithJSON(w, http.StatusNotFound, delivery.JsonError{Error: delivery.ErrDeletingSong, Message: domain.ErrSongNotFound.Error()})
+			delivery.RespondWithJSON(w, http.StatusNotFound, delivery.JSONError{Error: delivery.ErrDeletingSong, Message: domain.ErrSongNotFound.Error()})
 			return
 		}
 
-		delivery.RespondWithJSON(w, http.StatusInternalServerError, delivery.JsonError{Error: delivery.ErrDeletingSong})
+		delivery.RespondWithJSON(w, http.StatusInternalServerError, delivery.JSONError{Error: delivery.ErrDeletingSong})
 		return
 	}
 
@@ -95,16 +99,16 @@ func (h SongsHandler) updateSong(w http.ResponseWriter, r *http.Request, songID 
 		log.WithError(err).Error(delivery.ErrUpdatingSong)
 
 		if errors.Is(err, domain.ErrSongNotFound) {
-			delivery.RespondWithJSON(w, http.StatusNotFound, delivery.JsonError{Error: delivery.ErrUpdatingSong, Message: domain.ErrSongNotFound.Error()})
+			delivery.RespondWithJSON(w, http.StatusNotFound, delivery.JSONError{Error: delivery.ErrUpdatingSong, Message: domain.ErrSongNotFound.Error()})
 			return
 		}
 
 		if errors.Is(err, domain.ErrSongAlreadyExist) {
-			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JsonError{Error: delivery.ErrUpdatingSong, Message: domain.ErrSongAlreadyExist.Error()})
+			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JSONError{Error: delivery.ErrUpdatingSong, Message: domain.ErrSongAlreadyExist.Error()})
 			return
 		}
 
-		delivery.RespondWithJSON(w, http.StatusInternalServerError, delivery.JsonError{Error: delivery.ErrUpdatingSong})
+		delivery.RespondWithJSON(w, http.StatusInternalServerError, delivery.JSONError{Error: delivery.ErrUpdatingSong})
 		return
 	}
 
@@ -117,11 +121,11 @@ func (h SongsHandler) createSong(w http.ResponseWriter, r *http.Request, createS
 		log.WithError(err).Error(delivery.ErrCreatingSong)
 
 		if errors.Is(err, domain.ErrSongAlreadyExist) {
-			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JsonError{Error: delivery.ErrCreatingSong, Message: domain.ErrSongAlreadyExist.Error()})
+			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JSONError{Error: delivery.ErrCreatingSong, Message: domain.ErrSongAlreadyExist.Error()})
 			return
 		}
 
-		delivery.RespondWithJSON(w, http.StatusInternalServerError, delivery.JsonError{Error: delivery.ErrCreatingSong})
+		delivery.RespondWithJSON(w, http.StatusInternalServerError, delivery.JSONError{Error: delivery.ErrCreatingSong})
 		return
 	}
 

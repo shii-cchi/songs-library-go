@@ -1,5 +1,6 @@
 package dto
 
+// SongDto represents the data transfer object for a song with its details.
 type SongDto struct {
 	ID          int32  `json:"id"`
 	Group       string `json:"group"`

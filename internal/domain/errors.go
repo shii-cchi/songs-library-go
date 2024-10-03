@@ -2,9 +2,9 @@ package domain
 
 import "errors"
 
+// Error variables for various song-related operations.
 var (
 	ErrSongNotFound     = errors.New("song with this id not found")
-	ErrSongTextNotFound = errors.New("text for this song not found")
 	ErrSongAlreadyExist = errors.New("song with this name by this group already exist")
 	ErrCreatingRequest  = errors.New("error creating request to another server for getting song details")
 	ErrSendingRequest   = errors.New("error sending request to another server")

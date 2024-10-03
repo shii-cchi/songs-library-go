@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// Song represents the data model for a song.
 type Song struct {
 	ID          int32     `db:"id"`
 	Group       string    `db:"group"`
@@ -14,6 +15,7 @@ type Song struct {
 	Link        string    `db:"link"`
 }
 
+// SongWithNull represents the data model for a song with nullable fields to handle optional details.
 type SongWithNull struct {
 	ID          int32          `db:"id"`
 	Group       string         `db:"group"`

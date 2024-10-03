@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// Init initializes a new validator and registers a custom validation function.
 func Init() *validator.Validate {
 	validate := validator.New()
 
