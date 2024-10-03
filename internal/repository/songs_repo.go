@@ -48,7 +48,7 @@ func (r SongsRepo) GetSongs(page int, limit int, filtersMap map[string]string) (
 	return r.toSongs(songs), totalCount/limit + 1, nil
 }
 
-func (r SongsRepo) GetSong(songID int32) (string, error) {
+func (r SongsRepo) GetSongText(songID int32) (string, error) {
 	query := r.goquDb.Select("text").From(songsTable).Where(goqu.Ex{"id": songID})
 
 	var text sql.NullString
@@ -73,12 +73,12 @@ func (r SongsRepo) Delete(songID int32) error {
 
 	res, err := de.Executor().Exec()
 	if err != nil {
-		return fmt.Errorf("%w (id: %d): %s", domain.ErrDeletingSong, songID, err)
+		return err
 	}
 
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("%w (id: %d): %s", domain.ErrDeletingSong, songID, err)
+		return err
 	}
 
 	if rowsAffected == 0 {
@@ -101,7 +101,7 @@ func (r SongsRepo) UpdateSong(songID int32, paramsMap map[string]string) (domain
 		if errors.As(err, &pgErr) && pgErr.Code == domain.CodeUniqueConstraintViolation {
 			return domain.Song{}, fmt.Errorf("%w (id: %d): %s", domain.ErrSongAlreadyExist, songID, err)
 		}
-		return domain.Song{}, fmt.Errorf("%w (id: %d): %s", domain.ErrUpdatingSong, songID, err)
+		return domain.Song{}, err
 	}
 
 	if !songExists {
@@ -123,7 +123,7 @@ func (r SongsRepo) Create(groupName, songName string) (domain.Song, error) {
 		if errors.As(err, &pgErr) && pgErr.Code == domain.CodeUniqueConstraintViolation {
 			return domain.Song{}, fmt.Errorf("%w (group name: %s, song name: %s): %s", domain.ErrSongAlreadyExist, groupName, songName, err)
 		}
-		return domain.Song{}, fmt.Errorf("%w (group name: %s, song name: %s): %s", domain.ErrCreatingSong, groupName, songName, err)
+		return domain.Song{}, err
 	}
 
 	return newSong, nil

@@ -22,22 +22,3 @@ type SongWithNull struct {
 	Text        sql.NullString `db:"text"`
 	Link        sql.NullString `db:"link"`
 }
-
-type AddDetailsParams struct {
-	ID          int32
-	ReleaseDate *time.Time
-	Text        *string
-	Link        *string
-}
-
-type UpdateParams struct {
-	Details AddDetailsParams
-	Group   *string
-	Song    *string
-}
-
-type Details struct {
-	ReleaseDate *string `json:"release_date"`
-	Text        *string `json:"text"`
-	Link        *string `json:"link"`
-}

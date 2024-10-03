@@ -13,7 +13,7 @@ import (
 
 type SongsRepo interface {
 	GetSongs(page int, limit int, filtersMap map[string]string) ([]domain.Song, int, error)
-	GetSong(songID int32) (string, error)
+	GetSongText(songID int32) (string, error)
 	Delete(songID int32) error
 	UpdateSong(songID int32, paramsMap map[string]string) (domain.Song, error)
 	Create(groupName, songName string) (domain.Song, error)
@@ -43,8 +43,8 @@ func (s SongsService) GetSongs(params dto.GetSongsDto) ([]domain.Song, int, erro
 	return songs, totalPages, nil
 }
 
-func (s SongsService) GetSong(songID int32, params dto.PaginationParamsDto) ([]string, int, error) {
-	songText, err := s.repo.GetSong(songID)
+func (s SongsService) GetSongText(songID int32, params dto.PaginationParamsDto) ([]string, int, error) {
+	songText, err := s.repo.GetSongText(songID)
 	if err != nil {
 		return nil, 0, err
 	}

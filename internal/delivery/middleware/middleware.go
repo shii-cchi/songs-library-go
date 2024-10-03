@@ -46,11 +46,11 @@ func ValidateGetSongsParam(v *validator.Validate, next func(http.ResponseWriter,
 			return
 		}
 
-		next(w, r, dto.GetSongsDto{})
+		next(w, r, getSongsDto)
 	}
 }
 
-func ValidateGetSongParam(next func(http.ResponseWriter, *http.Request, int, dto.PaginationParamsDto)) http.HandlerFunc {
+func ValidateGetSongParam(v *validator.Validate, next func(http.ResponseWriter, *http.Request, int, dto.PaginationParamsDto)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		songID, err := extractAndValidateID(w, r)
 		if err != nil {
@@ -67,10 +67,18 @@ func ValidateGetSongParam(next func(http.ResponseWriter, *http.Request, int, dto
 			return
 		}
 
-		next(w, r, songID, dto.PaginationParamsDto{
+		paginationParams := dto.PaginationParamsDto{
 			Page:  page,
 			Limit: limit,
-		})
+		}
+
+		if err := v.Struct(paginationParams); err != nil {
+			log.WithError(err).Error(delivery.ErrInvalidPaginationParam)
+			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JsonError{Error: delivery.ErrInvalidPaginationParam, Message: delivery.MesInvalidPaginationParam})
+			return
+		}
+
+		next(w, r, songID, paginationParams)
 	}
 }
 
@@ -143,7 +151,7 @@ func getPaginationParam(w http.ResponseWriter, r *http.Request, paramName string
 		if err != nil {
 			log.WithError(err).Error(delivery.ErrInvalidPaginationParam)
 			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JsonError{Error: delivery.ErrInvalidPaginationParam, Message: fmt.Sprintf("%s (param: %s, value: %s)", delivery.ErrParsingParam, paramName, paramStr)})
-			return 0, delivery.ErrParsingParam
+			return 0, errors.New(delivery.ErrParsingParam)
 		}
 		return paramValue, nil
 	}
@@ -165,10 +173,9 @@ func getFilters(w http.ResponseWriter, r *http.Request) (dto.SongParamsDto, erro
 	for filter, isValid := range validFilters {
 		if value := r.URL.Query().Get(filter); value != "" {
 			if !isValid {
-				err := fmt.Errorf("%w (filter name: %s)", delivery.ErrInvalidFilterName, filter)
-				log.WithError(err).Error(delivery.ErrInvalidPaginationParam)
-				delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JsonError{Error: delivery.ErrInvalidFilters, Message: err.Error()})
-				return dto.SongParamsDto{}, delivery.ErrInvalidFilterName
+				log.Error(fmt.Sprintf("%s (filter name: %s)", delivery.ErrInvalidFilters, filter))
+				delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JsonError{Error: delivery.ErrInvalidFilters, Message: delivery.MesInvalidFilterName})
+				return dto.SongParamsDto{}, errors.New(delivery.ErrInvalidFilters)
 			}
 
 			reflect.ValueOf(&dtoFilters).Elem().FieldByName(strings.Title(filter)).Set(reflect.ValueOf(&value))

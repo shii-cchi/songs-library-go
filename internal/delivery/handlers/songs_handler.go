@@ -14,7 +14,7 @@ import (
 
 type SongsService interface {
 	GetSongs(params dto.GetSongsDto) ([]domain.Song, int, error)
-	GetSong(songID int32, params dto.PaginationParamsDto) ([]string, int, error)
+	GetSongText(songID int32, params dto.PaginationParamsDto) ([]string, int, error)
 	Delete(songID int32) error
 	Update(songID int32, updateSongInput dto.SongParamsDto) (domain.Song, error)
 	Create(createSongInput dto.CreateSongDto) (domain.Song, error)
@@ -35,7 +35,7 @@ func NewSongsHandler(validator *validator.Validate, songsService SongsService) *
 func (h SongsHandler) RegisterRoutes(r *chi.Mux) {
 	r.Route("/songs", func(r chi.Router) {
 		r.Get("/", middleware.ValidateGetSongsParam(h.validator, h.getSongs))
-		r.Get("/{id}", middleware.ValidateGetSongParam(h.getSongText))
+		r.Get("/{id}", middleware.ValidateGetSongParam(h.validator, h.getSongText))
 		r.Delete("/{id}", middleware.ValidateIDInput(h.deleteSong))
 		r.Put("/{id}", middleware.ValidateUpdateSongInput(h.validator, h.updateSong))
 		r.Post("/", middleware.ValidateCreateSongInput(h.validator, h.createSong))
@@ -54,16 +54,16 @@ func (h SongsHandler) getSongs(w http.ResponseWriter, r *http.Request, params dt
 }
 
 func (h SongsHandler) getSongText(w http.ResponseWriter, r *http.Request, songID int, params dto.PaginationParamsDto) {
-	verses, totalVerses, err := h.songsService.GetSong(int32(songID), params)
+	verses, totalVerses, err := h.songsService.GetSongText(int32(songID), params)
 	if err != nil {
-		log.WithError(err).Error(delivery.ErrGettingSong)
+		log.WithError(err).Error(delivery.ErrGettingSongText)
 
 		if errors.Is(err, domain.ErrSongNotFound) {
-			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JsonError{Error: delivery.ErrGettingSong, Message: domain.ErrSongNotFound.Error()})
+			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JsonError{Error: delivery.ErrGettingSongText, Message: domain.ErrSongNotFound.Error()})
 			return
 		}
 
-		delivery.RespondWithJSON(w, http.StatusInternalServerError, delivery.JsonError{Error: delivery.ErrGettingSong})
+		delivery.RespondWithJSON(w, http.StatusInternalServerError, delivery.JsonError{Error: delivery.ErrGettingSongText})
 		return
 	}
 
