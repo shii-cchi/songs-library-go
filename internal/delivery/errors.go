@@ -2,8 +2,8 @@ package delivery
 
 // JSONError represents the structure for error responses in JSON format.
 type JSONError struct {
-	Error   string `json:"error"`
-	Message string `json:"message,omitempty"`
+	Error   string `json:"error" example:"invalid input"`
+	Message string `json:"message,omitempty" example:"invalid JSON body"`
 }
 
 // Error constants for various input validation and parsing issues.

@@ -3,6 +3,8 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	// Import the PostgreSQL driver.
+	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	"os/exec"
 	"songs-library-go/internal/config"

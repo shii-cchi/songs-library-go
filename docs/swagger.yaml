@@ -1,0 +1,289 @@
+definitions:
+  delivery.JSONError:
+    properties:
+      error:
+        example: invalid input
+        type: string
+      message:
+        example: invalid JSON body
+        type: string
+    type: object
+  dto.CreateSongDto:
+    properties:
+      group:
+        example: Rammstein
+        maxLength: 100
+        type: string
+      song:
+        example: Weit Weg
+        maxLength: 100
+        type: string
+    required:
+    - group
+    - song
+    type: object
+  dto.SongDto:
+    properties:
+      group:
+        example: Rammstein
+        type: string
+      id:
+        example: 1
+        type: integer
+      link:
+        example: https://www.youtube.com/watch?v=N9AalJuwLyQ&ab_channel=Rammstein-Topic
+        type: string
+      release_date:
+        example: 17.05.2019
+        type: string
+      song:
+        example: Weit Weg
+        type: string
+      text:
+        example: |+
+          Niemand kann das Bild beschreiben
+          Gegen seine Fensterscheibe
+          Hat er das Gesicht gepresst
+          Und hofft, dass sie das Licht anlässt
+          Ohne Kleid sah er sie nie
+          Die Herrin seiner Fantasie
+          Er nimmt die Gläser vom Gesicht
+          Singt zitternd eine Melodie
+
+          Der Raum wird sich mit Mondlicht füllen
+          Lässt sie fallen, alle Hüllen
+
+        type: string
+    type: object
+  dto.SongParamsDto:
+    properties:
+      group:
+        example: Rammstein
+        maxLength: 100
+        minLength: 1
+        type: string
+      link:
+        example: https://www.youtube.com/watch?v=N9AalJuwLyQ&ab_channel=Rammstein-Topic
+        type: string
+      release_date:
+        example: 17.05.2019
+        type: string
+      song:
+        example: Weit Weg
+        maxLength: 100
+        minLength: 1
+        type: string
+      text:
+        example: |+
+          Niemand kann das Bild beschreiben
+          Gegen seine Fensterscheibe
+          Hat er das Gesicht gepresst
+          Und hofft, dass sie das Licht anlässt
+          Ohne Kleid sah er sie nie
+          Die Herrin seiner Fantasie
+          Er nimmt die Gläser vom Gesicht
+          Singt zitternd eine Melodie
+
+          Der Raum wird sich mit Mondlicht füllen
+          Lässt sie fallen, alle Hüllen
+
+        maxLength: 10000
+        minLength: 1
+        type: string
+    type: object
+  dto.SongsDto:
+    properties:
+      songs:
+        items:
+          $ref: '#/definitions/dto.SongDto'
+        type: array
+      total_pages:
+        example: 1
+        type: integer
+    type: object
+  dto.VersesDto:
+    properties:
+      total_pages:
+        example: 1
+        type: integer
+      verses:
+        example:
+        - '["Niemand kann das Bild beschreiben\nGegen seine Fensterscheibe\nHat er
+          das Gesicht gepresst\nUnd hofft'
+        - ' dass sie das Licht anlässt\nOhne Kleid sah er sie nie\nDie Herrin seiner
+          Fantasie\nEr nimmt die Gläser vom Gesicht\nSingt zitternd eine Melodie"'
+        - ' "Der Raum wird sich mit Mondlicht füllen\nLässt sie fallen'
+        - ' alle Hüllen"]'
+        items:
+          type: string
+        type: array
+    type: object
+info:
+  contact: {}
+paths:
+  /songs:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of songs based on various filters like
+        group, song, release date, text, and link.
+      parameters:
+      - description: Filters
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.SongParamsDto'
+      - description: Page number for pagination
+        in: query
+        name: page
+        type: integer
+      - description: Number of songs per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of songs
+          schema:
+            $ref: '#/definitions/dto.SongsDto'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/delivery.JSONError'
+      summary: Get list of songs
+      tags:
+      - songs
+    post:
+      consumes:
+      - application/json
+      description: Add a new song to the database.
+      parameters:
+      - description: Song details to create
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateSongDto'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created song
+          schema:
+            $ref: '#/definitions/dto.SongDto'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/delivery.JSONError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/delivery.JSONError'
+      summary: Create a new song
+      tags:
+      - songs
+  /songs/{songID}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a song from the database based on its ID.
+      parameters:
+      - description: Song ID
+        in: path
+        name: songID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Song successfully deleted
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/delivery.JSONError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/delivery.JSONError'
+      summary: Delete a song by song ID
+      tags:
+      - songs
+    get:
+      consumes:
+      - application/json
+      description: Retrieve the verses of a song based on its ID with pagination.
+      parameters:
+      - description: Song ID
+        in: path
+        name: songID
+        required: true
+        type: integer
+      - description: Page number for pagination
+        in: query
+        name: page
+        type: integer
+      - description: Number of verses per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of song verses
+          schema:
+            $ref: '#/definitions/dto.VersesDto'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/delivery.JSONError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/delivery.JSONError'
+      summary: Get song text by song ID
+      tags:
+      - songs
+    put:
+      consumes:
+      - application/json
+      description: Update the details of an existing song based on its ID.
+      parameters:
+      - description: Song ID
+        in: path
+        name: songID
+        required: true
+        type: integer
+      - description: Song details to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.SongParamsDto'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated song
+          schema:
+            $ref: '#/definitions/dto.SongDto'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/delivery.JSONError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/delivery.JSONError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/delivery.JSONError'
+      summary: Update a song by song ID
+      tags:
+      - songs
+swagger: "2.0"

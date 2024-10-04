@@ -2,8 +2,6 @@ package app
 
 import (
 	"github.com/go-chi/chi/v5"
-	// Import the PostgreSQL driver.
-	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"songs-library-go/internal/config"
