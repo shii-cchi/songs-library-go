@@ -10,16 +10,17 @@ import (
 	"songs-library-go/internal/delivery/dto"
 	"songs-library-go/internal/domain"
 	"strings"
+	"time"
 )
 
 // SongsRepo defines methods for interacting with the song data store, including retrieval, creation, updating, and deletion of songs.
 type SongsRepo interface {
-	GetSongs(page int, limit int, filtersMap map[string]string) ([]domain.Song, int, error)
+	GetSongs(page int, limit int, filtersMap map[string]interface{}) ([]domain.Song, int, error)
 	GetSongText(songID int32) (string, error)
 	Delete(songID int32) error
-	UpdateSong(songID int32, paramsMap map[string]string) (domain.Song, error)
+	UpdateSong(songID int32, paramsMap map[string]interface{}) (domain.Song, error)
 	Create(groupName, songName string) (domain.Song, error)
-	AddDetails(songID int32, paramsMap map[string]string) error
+	AddDetails(songID int32, paramsMap map[string]interface{}) error
 }
 
 // SongsService manages song operations and interacts with the repository and external music information API.
@@ -61,13 +62,19 @@ func (s SongsService) GetSongText(songID int32, params dto.PaginationParamsDto) 
 
 	verses := strings.Split(songText, "\n\n")
 
+	totalPages := int(math.Ceil(float64(len(verses)) / float64(params.Limit)))
+
+	if params.Page > totalPages {
+		return make([]string, 0), 0, nil
+	}
+
 	start := (params.Page - 1) * params.Limit
 	end := start + params.Limit
 	if end > len(verses) {
 		end = len(verses)
 	}
 
-	return verses[start:end], int(math.Ceil(float64(len(verses)) / float64(params.Limit))), nil
+	return verses[start:end], totalPages, nil
 }
 
 // Delete removes a song by its ID from the repository.
@@ -99,33 +106,8 @@ func (s SongsService) Create(createSongInput dto.CreateSongDto) (domain.Song, er
 	return song, nil
 }
 
-//	func (s SongsService) getAndSaveDetails(songID int32, groupName, songName string) {
-//		params := domain.AddDetailsParams{ID: songID}
-//
-//		releaseDateTime, err := time.Parse(domain.DateFormat, "15.10.2010")
-//		if err != nil {
-//			log.WithError(err).Error(domain.ErrParsingReleaseDate)
-//			return
-//		}
-//
-//		params.ReleaseDate = &releaseDateTime
-//
-//		text := "some text"
-//		link := "some link"
-//
-//		params.Text = &text
-//		params.Link = &link
-//
-//		if err := s.repo.AddDetails(params); err != nil {
-//			log.WithError(err).Error(domain.ErrAddingDetails)
-//			return
-//		}
-//
-//		log.Info(fmt.Sprintf("%s %d", domain.SuccessfulDetailAddition, songID))
-//	}
-
-func (s SongsService) makeSongParamsMap(params dto.SongParamsDto) map[string]string {
-	paramsMap := make(map[string]string)
+func (s SongsService) makeSongParamsMap(params dto.SongParamsDto) map[string]interface{} {
+	paramsMap := make(map[string]interface{})
 
 	if params.Group != nil {
 		paramsMap["group"] = *params.Group
@@ -136,11 +118,12 @@ func (s SongsService) makeSongParamsMap(params dto.SongParamsDto) map[string]str
 	}
 
 	if params.ReleaseDate != nil {
-		paramsMap["release_date"] = *params.ReleaseDate
+		date, _ := time.Parse(domain.DateFormat, *params.ReleaseDate)
+		paramsMap["release_date"] = date
 	}
 
 	if params.Text != nil {
-		paramsMap["text"] = *params.Text
+		paramsMap["text"] = strings.TrimSpace(*params.Text)
 	}
 
 	if params.Link != nil {

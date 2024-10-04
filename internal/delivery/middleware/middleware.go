@@ -179,16 +179,30 @@ func getFilters(w http.ResponseWriter, r *http.Request) (dto.SongParamsDto, erro
 
 	var dtoFilters dto.SongParamsDto
 
-	for filter, isValid := range validFilters {
-		if value := r.URL.Query().Get(filter); value != "" {
-			if !isValid {
-				log.Error(fmt.Sprintf("%s (filter name: %s)", delivery.ErrInvalidFilters, filter))
-				delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JSONError{Error: delivery.ErrInvalidFilters, Message: delivery.MesInvalidFilterName})
-				return dto.SongParamsDto{}, errors.New(delivery.ErrInvalidFilters)
-			}
-
-			reflect.ValueOf(&dtoFilters).Elem().FieldByName(strings.Title(filter)).Set(reflect.ValueOf(&value))
+	for filter, values := range r.URL.Query() {
+		if filter == "page" || filter == "limit" {
+			continue
 		}
+
+		if !validFilters[filter] {
+			log.Error(fmt.Sprintf("%s (filter name: %s)", delivery.ErrInvalidFilters, filter))
+			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JSONError{Error: delivery.ErrInvalidFilters, Message: delivery.MesInvalidFilterName})
+			return dto.SongParamsDto{}, errors.New(delivery.ErrInvalidFilters)
+		}
+
+		value := values[0]
+
+		if value == "" {
+			log.Error(fmt.Sprintf("%s (filter name: %s)", delivery.ErrInvalidFilter, filter))
+			delivery.RespondWithJSON(w, http.StatusBadRequest, delivery.JSONError{Error: delivery.ErrInvalidFilter, Message: delivery.MesEmptyFilter})
+			return dto.SongParamsDto{}, errors.New(delivery.ErrInvalidFilter)
+		}
+
+		if filter == "release_date" {
+			filter = "releaseDate"
+		}
+
+		reflect.ValueOf(&dtoFilters).Elem().FieldByName(strings.Title(filter)).Set(reflect.ValueOf(&value))
 	}
 
 	trimSpace(&dtoFilters)

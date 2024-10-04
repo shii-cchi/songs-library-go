@@ -11,6 +11,7 @@ const (
 	ErrInvalidPaginationParam = "invalid pagination param"
 	ErrParsingParam           = "error parsing pagination param from string to int"
 	ErrInvalidFilters         = "invalid filters param"
+	ErrInvalidFilter          = "invalid filter param"
 	ErrInvalidGetSongsParam   = "invalid get songs param"
 	ErrInvalidIDInput         = "invalid song id input"
 	ErrInvalidUpdateSongInput = "invalid update song input body"

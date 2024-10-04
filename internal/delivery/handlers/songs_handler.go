@@ -58,7 +58,7 @@ func (h SongsHandler) getSongs(w http.ResponseWriter, r *http.Request, params dt
 }
 
 func (h SongsHandler) getSongText(w http.ResponseWriter, r *http.Request, songID int, params dto.PaginationParamsDto) {
-	verses, totalVerses, err := h.songsService.GetSongText(int32(songID), params)
+	verses, totalPages, err := h.songsService.GetSongText(int32(songID), params)
 	if err != nil {
 		log.WithError(err).Error(delivery.ErrGettingSongText)
 
@@ -72,8 +72,8 @@ func (h SongsHandler) getSongText(w http.ResponseWriter, r *http.Request, songID
 	}
 
 	delivery.RespondWithJSON(w, http.StatusOK, dto.VersesDto{
-		Verses:      verses,
-		TotalVerses: totalVerses,
+		Verses:     verses,
+		TotalPages: totalPages,
 	})
 }
 

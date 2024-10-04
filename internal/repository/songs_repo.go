@@ -26,7 +26,7 @@ func NewSongsRepo(db *sql.DB) *SongsRepo {
 }
 
 // GetSongs retrieves a paginated list of songs from the database based on filters and pagination parameters.
-func (r SongsRepo) GetSongs(page int, limit int, filtersMap map[string]string) ([]domain.Song, int, error) {
+func (r SongsRepo) GetSongs(page int, limit int, filtersMap map[string]interface{}) ([]domain.Song, int, error) {
 	query := r.goquDb.From(songsTable)
 
 	conditions := goqu.Ex{}
@@ -34,7 +34,7 @@ func (r SongsRepo) GetSongs(page int, limit int, filtersMap map[string]string) (
 	if len(filtersMap) > 0 {
 		for field, value := range filtersMap {
 			if field == "text" && value != "" {
-				words := strings.Fields(value)
+				words := strings.Fields(value.(string))
 
 				var textConditions []goqu.Expression
 				for _, word := range words {
@@ -108,7 +108,7 @@ func (r SongsRepo) Delete(songID int32) error {
 }
 
 // UpdateSong modifies an existing song in the database and returns the updated song.
-func (r SongsRepo) UpdateSong(songID int32, paramsMap map[string]string) (domain.Song, error) {
+func (r SongsRepo) UpdateSong(songID int32, paramsMap map[string]interface{}) (domain.Song, error) {
 	update := r.goquDb.Update(songsTable).
 		Set(paramsMap).
 		Where(goqu.Ex{"id": songID}).
@@ -151,7 +151,7 @@ func (r SongsRepo) Create(groupName, songName string) (domain.Song, error) {
 }
 
 // AddDetails updates the song details in the database based on the provided parameters.
-func (r SongsRepo) AddDetails(songID int32, paramsMap map[string]string) error {
+func (r SongsRepo) AddDetails(songID int32, paramsMap map[string]interface{}) error {
 	update := r.goquDb.Update(songsTable).
 		Set(paramsMap).
 		Where(goqu.Ex{"id": songID})

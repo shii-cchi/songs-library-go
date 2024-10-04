@@ -10,11 +10,12 @@ import (
 )
 
 const (
-	successfulConnectionToDb = "successfully connected to db"
-	errConnectingToDb        = "error connecting to db"
-	mesReconnectingToDB      = "reconnecting to db"
-	errRunningMigrations     = "error running migration"
-	successfulRunMigrations  = "successfully executed migrations"
+	successfulConnectionToDb   = "successfully connected to db"
+	errConnectingToDb          = "error connecting to db"
+	mesReconnectingToDB        = "reconnecting to db"
+	successfulReconnectionToDb = "successfully reconnected to db"
+	errRunningMigrations       = "error running migration"
+	successfulRunMigrations    = "successfully executed migrations"
 )
 
 const (
@@ -71,6 +72,11 @@ func pingDatabase(conn *sql.DB) {
 				}
 
 				log.WithError(err).Info(mesReconnectingToDB)
+			} else {
+				if count != 0 {
+					count = 0
+					log.Info(successfulReconnectionToDb)
+				}
 			}
 		}
 	}
