@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${DB_USER} -d ${DB_NAME}'"]
+      interval: 10s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+    networks:
+      - songs_network
+
+  songs-library-go:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: songs-library-go
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${PORT}:${PORT}"
+    networks:
+      - songs_network
+    restart: always
+
+networks:
+  songs_network:
+    external: true
